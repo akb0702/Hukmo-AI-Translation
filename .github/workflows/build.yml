@@ -41,8 +41,16 @@ jobs:
           echo "image=ghcr.io/${OWNER_LC}/hukmo-ai-translation" >> "$GITHUB_OUTPUT"
           echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
-      - name: Write empty HF token (models are public)
-        run: echo "" > /tmp/hf_token
+      - name: Write HF token to file for BuildKit secret mount
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN repository secret is not set. Add it at Settings → Secrets and variables → Actions. The gated HuggingFace models cannot be downloaded without it."
+            exit 1
+          fi
+          printf '%s' "$HF_TOKEN" > /tmp/hf_token
+          chmod 600 /tmp/hf_token
 
       - name: Build and push
         uses: docker/build-push-action@v5
