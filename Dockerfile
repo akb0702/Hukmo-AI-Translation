@@ -7,9 +7,15 @@ RUN apt-get update -qq && \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
+# Bake gated model snapshots into /model. Both
+# ai4bharat/indictrans2-en-indic-1B and law-ai/InLegalTrans-En2Indic-1B are
+# gated repos requiring a HuggingFace token at build time. The token is
+# provided via a BuildKit build secret (id=hf_token) and never persisted to
+# the image layers.
 COPY bake_model.py /tmp/bake_model.py
 RUN --mount=type=secret,id=hf_token \
-    HUGGING_FACE_HUB_TOKEN=$(cat /run/secrets/hf_token) \
+    HF_TOKEN="$(cat /run/secrets/hf_token)" \
+    HUGGING_FACE_HUB_TOKEN="$(cat /run/secrets/hf_token)" \
     python3 /tmp/bake_model.py
 
 FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
